@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
+	"runtime"
 	"time"
 	"unicode"
 )
@@ -28,7 +30,38 @@ const (
 	LISTHOST             = 3
 	DEPCB                = 4
 	ENVCB                = 5
+	LISTACC				 = 6
+	LISTDEP				 = 7
+	LISTENV				 = 8
 )
+
+// utils
+
+// CLEAR SCREEN
+var clear map[string]func() //create a map for storing clear funcs
+
+func init() {
+    clear = make(map[string]func()) //Initialize it
+    clear["linux"] = func() { 
+        cmd := exec.Command("clear") //Linux example, its tested
+        cmd.Stdout = os.Stdout
+        cmd.Run()
+    }
+    clear["windows"] = func() {
+        cmd := exec.Command("cmd", "/c", "cls") //Windows example, its tested 
+        cmd.Stdout = os.Stdout
+        cmd.Run()
+    }
+}
+
+func CallClear() {
+    value, ok := clear[runtime.GOOS] //runtime.GOOS -> linux, windows, darwin etc.
+    if ok { //if we defined a clear func for that platform:
+        value()  //we execute it
+    } else { //unsupported platform
+        panic("Your platform is unsupported! I can't clear terminal screen :(")
+    }
+}
 
 /****************************BCIP*************************/
 var HOSTS []string
@@ -290,7 +323,7 @@ func createBlockchain() Blockchain {
 	return bc
 }
 
-func printCuentaBancaria() {
+func printBlockChain() {
 	blocks := localBlockchain.Chain[1:]
 
 	fmt.Printf("\n")
@@ -299,7 +332,7 @@ func printCuentaBancaria() {
 	for index, block := range blocks {
 		cuentaBancaria := block.Data
 
-		fmt.Printf("------Registro No. %d----\n", index+1)
+		fmt.Printf("------Bloque No. %d----\n", index+1)
 		if len(cuentaBancaria.Nombre) > 0 {
 			fmt.Printf("--- REGISTRO DE CUENTA BANCARIA ---\n")
 		}
@@ -331,6 +364,71 @@ func printCuentaBancaria() {
 		fmt.Println("\tPrevious Hash code: " + block.PreviousHash)
 		fmt.Println("\n")
 		
+	}
+}
+
+func printAccounts() {
+	blocks := localBlockchain.Chain[1:]
+
+	fmt.Printf("\n")
+	fmt.Printf("-------- Blockchain's Accounts Block List --------\n")
+	for index, block := range blocks {
+		cuentaBancaria := block.Data
+
+		if len(cuentaBancaria.Nombre) > 0 {
+			fmt.Printf("------Bloque No. %d----\n", index+1)
+			fmt.Printf("\tNombre: %s", cuentaBancaria.Nombre)
+			fmt.Printf("\tDNI: %s", cuentaBancaria.DNI)
+			fmt.Printf("\tSaldo: %.2f \n", cuentaBancaria.Saldo)
+			fmt.Println("\n")
+			fmt.Println("\tFecha de apertura: " + block.Timestamp.String())
+			fmt.Println("\tHash code: " + block.Hash)
+			fmt.Println("\tPrevious Hash code: " + block.PreviousHash)
+			fmt.Println("\n")
+		}
+	}
+}
+
+func printDepositos() {
+	blocks := localBlockchain.Chain[1:]
+
+	fmt.Printf("\n")
+	fmt.Printf("-------- Blockchain's Deposits Block List --------\n")
+	for index, block := range blocks {
+		cuentaBancaria := block.Data
+
+		if len(cuentaBancaria.Nombre) == 0 && len(cuentaBancaria.DNIDestino) == 0 {
+			fmt.Printf("------Bloque No. %d----\n", index+1)
+			fmt.Printf("\tDNI: %s", cuentaBancaria.DNI)
+			fmt.Printf("\nDinero depositado: %.2f \n", cuentaBancaria.Saldo)
+			fmt.Println("\n")
+			fmt.Println("\tFecha del depósito: " + block.Timestamp.String())
+			fmt.Println("\tHash code: " + block.Hash)
+			fmt.Println("\tPrevious Hash code: " + block.PreviousHash)
+			fmt.Println("\n")
+		}
+	}
+}
+
+func printTransfers() {
+	blocks := localBlockchain.Chain[1:]
+
+	fmt.Printf("\n")
+	fmt.Printf("-------- Blockchain's Transfers Block List --------\n")
+	for index, block := range blocks {
+		cuentaBancaria := block.Data
+
+		if len(cuentaBancaria.DNIDestino) > 0 {
+			fmt.Printf("------Bloque No. %d----\n", index+1)
+			fmt.Printf("\tDNI: %s", cuentaBancaria.DNI)
+			fmt.Printf("\tDNI Destino: %s", cuentaBancaria.DNIDestino)
+			fmt.Printf("\nDinero transferido: %.2f \n", cuentaBancaria.Saldo)
+			fmt.Println("\n")
+			fmt.Println("\tFecha del depósito: " + block.Timestamp.String())
+			fmt.Println("\tHash code: " + block.Hash)
+			fmt.Println("\tPrevious Hash code: " + block.PreviousHash)
+			fmt.Println("\n")
+		}
 	}
 }
 
@@ -370,7 +468,7 @@ func main() {
 	end := make(chan int)
 	updatedBlocks := make(chan int)
 
-
+	CallClear()
 	fmt.Print("Ingrese su host: ")
 	fmt.Scanf("%s\n", &LOCAHOST)
 	fmt.Print(
@@ -397,16 +495,16 @@ func main() {
 	fmt.Println("Bienvenido!")
 	in := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Print("1. Registro de Usuario\n2. Lista de Registros\n3. Lista de Hosts\n4. Depositar Dinero\n5. Enviar Dinero\n")
-		fmt.Print("Ingrese opción 1|2|3|4|5: ")
+		fmt.Print("1. Registro de Usuario\n2. Lista de Registros\n3. Lista de Hosts\n4. Depositar Dinero\n5. Enviar Dinero\n 6. Lista de Cuentas Bancarias\n 7. Lista de Depósitos\n 8. Lista de Transferencias\n")
+		fmt.Print("Ingrese opción 1|2|3|4|5|6|7|8 \n")
 		fmt.Scanf("%d\n", &action)
 
 		// 1 Nueva cuenta bancaria
 		if action == NEWCB {
-
+			CallClear() // cls
 			cuentaBancaria := CuentaBancaria{}
 
-			fmt.Println(("---Registro---"))
+			fmt.Println("---Registro---")
 			fmt.Print("Ingrese su Nombre: ")
 			cuentaBancaria.Nombre, _ = in.ReadString('\n')
 
@@ -456,15 +554,19 @@ func main() {
 			BroadcastBlock(blockToBroadcast)
 
 			fmt.Println("Se ha registrado satisfactoriamente!")
-			time.Sleep(2 * time.Second)
+		    time.Sleep(3 * time.Second)
+		    CallClear()
 
 		} else if action == LISTCB { // 2 listar blockchain
-			printCuentaBancaria()
+			CallClear() // cls
+			printBlockChain()
 
 		} else if action == LISTHOST { // 3 listar hosts
+			CallClear() // cls
 			printHosts()
 
 		} else if action == DEPCB { // 4 Depositar o extraer dinero
+			CallClear() // cls
 
 			cuentaBancaria := CuentaBancaria{}
 
@@ -505,7 +607,8 @@ func main() {
 				fmt.Println("Error: El DNI ingresado no existe.")
 			}
 
-			time.Sleep(2 * time.Second)
+			time.Sleep(3 * time.Second)
+			CallClear() // cls
 
 		} else if action == ENVCB { // 5 enviar dinero de una cuenta a otra
 
@@ -544,10 +647,23 @@ func main() {
 				blockToBroadcast := localBlockchain.addBlock(newBlock)
 				BroadcastBlock(blockToBroadcast)
 				fmt.Println("Se ha enviado el dinero satisfactoriamente!")
+				time.Sleep(3 * time.Second)
+				CallClear() // cls
 			} else {
-				fmt.Println("Error: no se efectuó la transacción de envío") 
+				fmt.Println("Error: no se efectuó la transacción de envío")
+				time.Sleep(3 * time.Second)
+				CallClear() // cls 
 			}
 			
+		} else if action == LISTACC { // Listar cuentas bancarias
+			CallClear() // cls
+			printAccounts()
+		} else if action == LISTDEP {
+			CallClear() // cls
+			printDepositos()
+		} else if action == LISTENV {
+			CallClear() // cls
+			printTransfers()
 		}
 
 		//else if action == 6 {
@@ -559,5 +675,5 @@ func main() {
 
 	}
 	<-end
-
+ 
 }
